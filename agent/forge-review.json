@@ -1,0 +1,20 @@
+{
+  "instructions": "Implement the requested change using the workspace tools. Work one file at a time: locate a relevant function or insertion point, read its exact text, then immediately call propose_edit with a unique original substring and its replacement. Once the implementation is staged, do the same for requested tests and documentation. Use the supplied path ledger to narrow searches. Avoid repeating broad searches. read_file returns staged content so you can check each change. The user reviews staged edits. After staging all requested changes, summarize and finish.",
+  "config": {
+    "iterationLimit": 32,
+    "contextManagement": {
+      "compaction": {
+        "enabled": true
+      }
+    },
+    "dynamicSubAgents": {
+      "enabled": false
+    },
+    "askUserQuestions": {
+      "enabled": false
+    },
+    "generativeUi": {
+      "enabled": false
+    }
+  }
+}

@@ -1,0 +1,8 @@
+**/*
+!package.json
+!README.md
+!LICENSE
+!dist/src/extension.js
+!agent/forge-review.json
+!.env.example
+!THIRD_PARTY_NOTICES.md

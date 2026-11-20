@@ -1,0 +1,125 @@
+{
+  "name": "forge-review",
+  "version": "0.1.0",
+  "description": "Review model-generated edits in VS Code, one diff hunk at a time.",
+  "main": "./dist/src/extension.js",
+  "scripts": {
+    "build": "tsc && esbuild src/extension.ts scripts/spike.ts scripts/fixture.ts scripts/host-test.ts scripts/review-test.ts scripts/verify.ts scripts/task-host.ts --bundle --platform=node --format=cjs --external:vscode --outdir=dist --outbase=.",
+    "spike": "node dist/scripts/spike.js",
+    "test": "npm run build && node dist/scripts/review-test.js && npm run spike:fixture",
+    "spike:fixture": "node dist/scripts/fixture.js",
+    "verify:a": "npm run build && node dist/scripts/verify.js a",
+    "verify:b": "npm run build && node dist/scripts/verify.js b",
+    "verify:c": "npm run build && node dist/scripts/verify.js c",
+    "harness": "node scripts/harness.mjs",
+    "verify:review": "npm run build && node dist/scripts/verify.js review",
+    "doctor": "node scripts/doctor.mjs",
+    "verify:tools": "npm run build && node dist/scripts/verify.js tools"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "@truefoundry/trueforge-sdk": "0.185.0",
+    "diff": "9.0.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@truefoundry/trueforge": "0.185.1",
+    "@types/node": "22.20.5",
+    "@types/vscode": "1.100.0",
+    "esbuild": "0.28.2",
+    "node": "22.22.0",
+    "typescript": "7.0.2"
+  },
+  "private": true,
+  "engines": {
+    "vscode": "^1.100.0",
+    "node": ">=22.14.0"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "forgeReview.spike",
+        "title": "Overtype: Check TrueForge Connection"
+      },
+      {
+        "command": "forgeReview.inline",
+        "title": "Overtype: Edit Selection"
+      },
+      {
+        "command": "forgeReview.agent",
+        "title": "Overtype: Start Agent Task"
+      },
+      {
+        "command": "forgeReview.stop",
+        "title": "Overtype: Stop"
+      },
+      {
+        "command": "forgeReview.review",
+        "title": "Overtype: Review Changes"
+      },
+      {
+        "command": "forgeReview.acceptAll",
+        "title": "Overtype: Accept All"
+      },
+      {
+        "command": "forgeReview.rejectAll",
+        "title": "Overtype: Reject All"
+      },
+      {
+        "command": "forgeReview.session",
+        "title": "Overtype: Open TrueForge Session"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "forgeReview.inline",
+        "key": "ctrl+i",
+        "mac": "cmd+i",
+        "when": "editorTextFocus && editorHasSelection"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "forgeReview.acceptAll",
+          "when": "resourceScheme == forge-review",
+          "group": "navigation"
+        },
+        {
+          "command": "forgeReview.rejectAll",
+          "when": "resourceScheme == forge-review",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Overtype",
+      "properties": {
+        "forgeReview.url": {
+          "type": "string",
+          "default": "",
+          "scope": "machine"
+        },
+        "forgeReview.models": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "scope": "machine"
+        },
+        "forgeReview.contextBudget": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 4000
+        }
+      }
+    }
+  },
+  "publisher": "forge-review",
+  "displayName": "Overtype"
+}
