@@ -26,6 +26,7 @@ export async function turn(
   output: Pick<v.OutputChannel, "append" | "appendLine">,
   selection?: { doc: v.TextDocument; text: string },
   conversation?: Conversation,
+  approveCommand?: () => Promise<boolean>,
 ) {
   const cfg = v.workspace.getConfiguration("forgeReview");
   const baseUrl =
@@ -288,11 +289,13 @@ export async function turn(
             output.append(e.content);
           if (e.type === "tool.approval_required") {
             for (const call of e.toolCalls) {
-              const choice = await v.window.showWarningMessage(
-                "TrueForge requests permission for a workspace command. Its exact command will be shown before execution.",
-                "Continue",
-                "Deny",
-              );
+              const allowed = approveCommand
+                ? await approveCommand()
+                : (await v.window.showWarningMessage(
+                    "TrueForge requests permission for a workspace command. Its exact command will be shown before execution.",
+                    "Continue",
+                    "Deny",
+                  )) === "Continue";
               await client.sessions.createTurnEvents(data.id, turnId, {
                 events: [
                   {
@@ -300,7 +303,7 @@ export async function turn(
                     threadId: e.threadId,
                     toolCallId: call.id,
                     approval:
-                      choice === "Continue"
+                      allowed
                         ? { status: "allow" }
                         : { status: "deny" },
                   },

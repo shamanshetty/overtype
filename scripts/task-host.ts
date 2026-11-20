@@ -159,6 +159,8 @@ async function execute() {
       new AbortController(),
       output,
       task === "a" ? { doc: helper, text: selection } : undefined,
+      undefined,
+      async () => false,
     );
   }
   assert.equal(git("status", "--porcelain"), "");
@@ -188,7 +190,7 @@ async function execute() {
   } else {
     python(
       "-c",
-      "from flask import Flask; import json; a=Flask('demo'); a.config.update({s:'hidden' for s in ['MY_SECRET','DB_PASSWORD','TOKEN','API_KEY']}); r=a.test_cli_runner().invoke(args=['config']); assert r.exit_code==0,r.output; data=json.loads(r.output); assert all(data[k]=='***' for k in ['MY_SECRET','DB_PASSWORD','TOKEN','API_KEY']); assert 'config' in a.test_cli_runner().invoke(args=['--help']).output",
+      "from flask import Flask; from flask.cli import FlaskGroup; import json; a=Flask('demo'); a.config.update({s:'hidden' for s in ['MY_SECRET','DB_PASSWORD','TOKEN','API_KEY']}); cli=FlaskGroup(create_app=lambda: a); runner=a.test_cli_runner(); r=runner.invoke(cli, ['config']); assert r.exit_code==0,r.output; data=json.loads(r.output); assert all(data[k]=='***' for k in ['MY_SECRET','DB_PASSWORD','TOKEN','API_KEY']); assert 'config' in runner.invoke(cli, ['--help']).output",
     );
   }
   const result = python("-m", "pytest", "tests/test_cli.py", "-q");
