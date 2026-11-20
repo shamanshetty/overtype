@@ -45,6 +45,54 @@ async function execute() {
   const helper = await v.workspace.openTextDocument(
     v.Uri.file(join(root, "src/flask/helpers.py")),
   );
+  if (task === "stop") {
+    const original = helper.getText();
+    const marker = randomUUID().slice(0, 8);
+    const goal =
+      "Verification " + marker + ": read src/flask/helpers.py and propose a short docstring improvement.";
+    const client = new TrueForge({ baseUrl: "http://127.0.0.1:8790" });
+    await v.window.showTextDocument(helper);
+    const running = v.commands.executeCommand("forgeReview.agent", goal);
+    const waitFor = async <T>(read: () => Promise<T | undefined>) => {
+      const deadline = Date.now() + 30_000;
+      do {
+        const value = await read();
+        if (value !== undefined) return value;
+        await new Promise((resolve) => setTimeout(resolve, 150));
+      } while (Date.now() < deadline);
+      throw Error("Timed out waiting for a TrueForge turn event.");
+    };
+    try {
+      const session = await waitFor(async () => {
+        let inspected = 0;
+        for await (const item of await client.sessions.list()) {
+          if (item.title?.includes(marker)) return item.id;
+          if (++inspected === 12) break;
+        }
+      });
+      const state = async () => {
+        for await (const { event } of await client.sessions.listEvents(session)) {
+          if (event.type === "turn.created" || event.type === "turn.done")
+            return event.state.status;
+        }
+      };
+      assert.equal(await waitFor(state), "running");
+      await v.commands.executeCommand("forgeReview.stop");
+      await running;
+      assert.equal(await waitFor(async () => {
+        const status = await state();
+        return status === "running" ? undefined : status;
+      }), "cancelled");
+      assert.equal(helper.getText(), original);
+      assert.equal(helper.isDirty, false);
+      assert.equal(git("status", "--porcelain"), "");
+      console.log("PASS Stop cancelled an active TrueForge turn and left the buffer and checkout unchanged.");
+    } finally {
+      await v.commands.executeCommand("forgeReview.stop");
+      await running;
+    }
+    return;
+  }
   const selection = helper
     .getText()
     .match(/^def get_debug_flag\([^]*?(?=^def |^class )/m)?.[0];
@@ -172,12 +220,17 @@ async function execute() {
     task !== "b"
       ? ["src/flask/helpers.py"]
       : ["docs/cli.rst", "src/flask/cli.py", "tests/test_cli.py"];
-  assert.deepEqual(
-    [...review.files.values()]
-      .map((p) => v.workspace.asRelativePath(p.uri))
-      .sort(),
-    expected,
-  );
+  const changed = [...review.files.values()]
+    .map((p) => v.workspace.asRelativePath(p.uri))
+    .sort();
+  if (task === "b") {
+    assert.ok(
+      expected.every((path) => changed.includes(path)),
+      "Task B must edit implementation, tests and docs. Staged: " + changed.join(", "),
+    );
+  } else {
+    assert.deepEqual(changed, expected);
+  }
   for (const [key, p] of [...review.files]) {
     await review.decide(key, p.revision, undefined, true);
     assert.ok(await (await v.workspace.openTextDocument(p.uri)).save());
@@ -188,10 +241,13 @@ async function execute() {
       "import os; from flask.helpers import get_debug_flag as f\nfor value in ['off','n','OFF','N','1']:\n os.environ['FLASK_DEBUG']=value\n assert f() == (value=='1')\nassert all(x in f.__doc__.lower() for x in ['off','false','no','0','n'])",
     );
   } else {
-    python(
+    const evidence = python(
       "-c",
-      "from flask import Flask; from flask.cli import FlaskGroup; import json; a=Flask('demo'); a.config.update({s:'hidden' for s in ['MY_SECRET','DB_PASSWORD','TOKEN','API_KEY']}); cli=FlaskGroup(create_app=lambda: a); runner=a.test_cli_runner(); r=runner.invoke(cli, ['config']); assert r.exit_code==0,r.output; data=json.loads(r.output); assert all(data[k]=='***' for k in ['MY_SECRET','DB_PASSWORD','TOKEN','API_KEY']); assert 'config' in runner.invoke(cli, ['--help']).output",
+      "from flask import Flask; from flask.cli import FlaskGroup; import json; a=Flask('demo'); keys=['MY_SECRET','DB_PASSWORD','TOKEN','API_KEY']; a.config.update({k:'hidden' for k in keys}); a.config['DEMO_VISIBLE']='visible'; cli=FlaskGroup(create_app=lambda: a); runner=a.test_cli_runner(); r=runner.invoke(cli, ['config']); assert r.exit_code==0,(r.output,repr(r.exception)); data=json.loads(r.output); assert all(data[k]=='***' for k in keys); assert data['DEMO_VISIBLE']=='visible'; help=runner.invoke(cli, ['--help']); assert help.exit_code==0 and any(line.split()[0:1]==['config'] for line in help.output.splitlines()),help.output; print(help.output); print(json.dumps({k:data[k] for k in keys+['DEMO_VISIBLE']},indent=2))",
     );
+    const summary = git("diff", "--stat");
+    console.log(summary + "\n" + evidence);
+    output.appendLine(summary + "\n" + evidence);
   }
   const result = python("-m", "pytest", "tests/test_cli.py", "-q");
   console.log(result);

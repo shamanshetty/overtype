@@ -9,8 +9,9 @@ Built from scratch for the TrueFoundry Forge-a-thon by **Team 007 · Shaman Shet
 | Capability | Evidence on the development workstation |
 |---|---|
 | Inline edit, Task A | A live Gemini turn on Flask 3.1.3 staged an edit to `get_debug_flag`. The verifier accepted it, checked the requested values and docstring, and passed all 58 CLI tests. |
-| Multi-file agent, Task B | The model used real repository tools. A complete implementation, test and documentation change passing the verifier is **still outstanding**. One live run staged all three files, but its generated command failed on Flask?s default duration value. Subsequent runs hit provider rate limits. |
+| Multi-file agent, Task B | The model used real repository tools. A complete implementation, test and documentation change passing the verifier is **still outstanding**. One live run staged all three files. A replay needed two manual fixes before all 59 CLI tests passed and the command showed masked JSON. Subsequent attempts encountered provider limits and availability errors. |
 | Recovery, Task C | The verifier exercised an unreachable harness and a failed primary provider. A working Gemini secondary staged a proposal while the checkout stayed clean. A separate live run accepted the fallback patch in the disposable checkout and passed all 58 CLI tests. |
+| Stop and cancellation | A live VS Code check invoked Stop on a running TrueForge turn. The harness reported cancellation and the editor buffer and Git checkout stayed unchanged. |
 | Review and editor tools | Isolated VS Code checks exercised a diff, hunk acceptance and rejection, native undo, staged reads, protected paths and rejection of an edit after cancellation. |
 | Harness integration | A deterministic provider invoked an authenticated editor tool through TrueForge and returned its fresh nonce. This checks the transport independently of model quality. |
 

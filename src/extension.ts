@@ -128,7 +128,8 @@ export function activate(context: v.ExtensionContext) {
     }
   }
   command("inline", () => run(true));
-  command("agent", () => {
+  command("agent", (goal?: string) => {
+    if (typeof goal === "string" && goal.trim()) return run(false, goal);
     if (view) {
       view.reveal();
       return;

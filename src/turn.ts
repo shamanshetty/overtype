@@ -265,8 +265,11 @@ export async function turn(
         conversation.model = model;
         if (!reuse) conversation.previous = undefined;
       }
+      let cancellation: Promise<unknown> | undefined;
       const cancel = () => {
-        void client.sessions.cancel(data.id).catch(() => {});
+        cancellation = client.sessions
+          .cancel(data.id, { timeout: 5000, maxRetries: 0 })
+          .catch((error) => log("TrueForge cancellation request failed: " + String(error)));
       };
       signal.addEventListener("abort", cancel, { once: true });
       try {
@@ -421,6 +424,7 @@ export async function turn(
         );
       } finally {
         signal.removeEventListener("abort", cancel);
+        await cancellation;
       }
     }
   } finally {

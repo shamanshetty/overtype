@@ -7,8 +7,8 @@ import { join, resolve } from "node:path";
 
 async function main() {
   const task = process.argv[2];
-  if (!["a", "b", "c", "review", "tools"].includes(task))
-    throw Error("Expected a, b, c or review.");
+  if (!["a", "b", "c", "review", "tools", "stop"].includes(task))
+    throw Error("Expected a, b, c, review, tools or stop.");
   const temp = await mkdtemp(join(realpathSync.native(tmpdir()), "forge-flask-"));
   try {
     const repo = join(temp, "flask");
